@@ -16,6 +16,9 @@ import java.util.StringTokenizer;
 import java.util.TreeSet;
 import java.util.Iterator;
 
+import java.io.FileInputStream;
+import java.io.LineNumberReader;
+
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
@@ -23,6 +26,7 @@ import org.kohsuke.args4j.ParserProperties;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -123,11 +127,24 @@ public class PairsPMI extends Configured implements Tool {
 			line = line.replaceAll("[\",.:;=$#@%\\*!\\?\\[\\]\\(\\)\\{\\}&]","");
 			line = line.toLowerCase();
 
+			String token;
 			StringTokenizer t = new StringTokenizer(line);
 
 			Set<String> sortedTerms = new TreeSet<String>();
 			while(t.hasMoreTokens()){
-				sortedTerms.add(t.nextToken()); //remove tokens duplicados e ordena
+				token = t.nextToken();
+				//limpa lixo dos tokens
+				while((token.startsWith("'")) || (token.startsWith("-"))){
+					token = token.substring(1,token.length());
+				}
+				if(token.endsWith("-")){
+					token = token.substring(0,token.length()-1);
+				}
+
+				if(token.length() == 0){
+					continue;
+				}
+				sortedTerms.add(token); //remove tokens duplicados e ordena
 			}
 
 			String left = "";
@@ -181,17 +198,16 @@ public class PairsPMI extends Configured implements Tool {
 		private static Map<String, Integer> tokensCount = new HashMap<String, Integer>();
 
 		private static DoubleWritable PMI = new DoubleWritable();
-		private static double totalDocs = 156215.0; //Corrigir este numero
+		private static double totalDocs = 0.0; //Corrigir este numero
 
 		@Override
 		public void setup(Context context) throws IOException{
-	      //TODO Read from intermediate output of first job
-	      // and build in-memory map of terms to their individual totals
+			//TODO Read from intermediate output of first job
+			// and build in-memory map of terms to their individual totals
 			Configuration conf = context.getConfiguration();
 			FileSystem fs = FileSystem.get(conf);
 
-	//      Path inFile = new Path(conf.get("intermediatePath"));
-			Path inFile = new Path("./tokens_count_file/part-r-00000");
+			Path inFile = new Path(conf.get("intermediatePath") + "/part-r-00000");
 
 			if(!fs.exists(inFile)){
 				throw new IOException("File Not Found: " + inFile.toString());
@@ -222,6 +238,20 @@ public class PairsPMI extends Configured implements Tool {
 
 			reader.close();
 
+			///--- contabiliza linhas do arquivo de entrada
+			LineNumberReader lineCounter = new LineNumberReader(new InputStreamReader(new FileInputStream(conf.get("inputPath"))));
+			String nextLine = null;
+			try {
+				while ((nextLine = lineCounter.readLine()) != null) {
+					if (nextLine == null)
+						break;
+				}
+				totalDocs = lineCounter.getLineNumber() * 1.0;
+				LOG.info("Numero total de linha do arquivo: " + totalDocs);
+			} catch (Exception done) {
+				done.printStackTrace();
+			}
+
 		}
 
 		@Override
@@ -241,7 +271,7 @@ public class PairsPMI extends Configured implements Tool {
 				double probLeft = tokensCount.get(left) / totalDocs;
 				double probRight = tokensCount.get(right) / totalDocs;
 
-				double pmi = Math.log(probPair / (probLeft * probRight));
+				double pmi = Math.log10(probPair / (probLeft * probRight));
 
 
 				pair.set(left, right);
@@ -253,10 +283,6 @@ public class PairsPMI extends Configured implements Tool {
 	}
 
 	public PairsPMI() {}
-
-	/*private static final String INPUT = "input";
-	private static final String OUTPUT = "output";
-	private static final String NUM_REDUCERS = "numReducers";*/
 
 	private static final class Args {
 		@Option(name = "-input", metaVar = "[path]", required = true, usage = "input path")
@@ -301,6 +327,7 @@ public class PairsPMI extends Configured implements Tool {
 
 		Configuration conf = getConf();
 		conf.set("intermediatePath", intermediatePath);
+		conf.set("inputPath",inputPath);
 
 		Job job1 = Job.getInstance(conf);
 		job1.setJobName(PairsPMI.class.getSimpleName() + " TokensCount");
@@ -316,7 +343,7 @@ public class PairsPMI extends Configured implements Tool {
 
 		job1.setMapperClass(TokensCountMapper.class);
 		job1.setCombinerClass(TokensCountReducer.class);
-		job1.setReducerClass(TokensCountReducer.class);
+		job1.setReducerClass(TokensCountReducer.class);	
 
 		// Delete the output directory if it exists already.
 		Path intermediateDir = new Path(intermediatePath);
@@ -327,7 +354,7 @@ public class PairsPMI extends Configured implements Tool {
 		LOG.info("Job Finished in " + (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
 
 
-		/*// Start second job
+		// Start second job
 		LOG.info("------------------------------------------------------------------------------\n");
 		LOG.info("Tool: " + PairsPMI.class.getSimpleName() + " Pairs Part");
 		LOG.info(" - input path: " + inputPath);
@@ -355,7 +382,7 @@ public class PairsPMI extends Configured implements Tool {
 		startTime = System.currentTimeMillis();
 		job2.waitForCompletion(true);
 		LOG.info("Job Finished in " + (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
-*/
+
 		
 		return 0;
 	}
