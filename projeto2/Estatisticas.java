@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.*;
 
 public class Estatisticas{
 
@@ -68,6 +69,8 @@ public class Estatisticas{
 	}
 
 	public static void tresMaioresPmi(String path, String chave){
+		java.util.List<java.util.Map.Entry<String,Double>> pairList= new java.util.ArrayList<>();
+		Map.Entry<String,Double> pair;
 		String par,esquerda;
 		Double pmi=0.0;
 
@@ -95,13 +98,25 @@ public class Estatisticas{
 
 
 				if(esquerda.equals(chave)){
-					System.out.println(par+":"+pmi);
+					//System.out.println(par+":"+pmi);
+					pair = new AbstractMap.SimpleEntry<>(par,pmi);
+					pairList.add(pair);
 				}
 				
 				line = reader.readLine();
 			}
 
-			
+			Collections.sort(pairList, new Comparator() {
+	            public int compare(Object o1, Object o2) {
+	                Map.Entry<String,Double> e1 = (Map.Entry<String,Double>) o1;
+	                Map.Entry<String,Double> e2 = (Map.Entry<String,Double>) o2;
+	                return e1.getValue() < e2.getValue() ? -1 : (e1.getValue() > e2.getValue() ? +1 : 0);
+	            }
+	        });
+
+	        for(Map.Entry<String,Double> entrada : pairList){
+	        	System.out.println(entrada.getKey()+":"+entrada.getValue());
+	        }	
 
 			reader.close();
 		}catch(Exception e){

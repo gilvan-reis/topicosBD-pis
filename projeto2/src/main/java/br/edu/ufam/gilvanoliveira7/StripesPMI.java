@@ -112,14 +112,9 @@ public class StripesPMI extends Configured implements Tool {
 	  //Classes do segundo job que vai efetivamente calcular o PMI
 	private static class StripesPMIMapper extends Mapper<LongWritable, Text, Text, HMapStIW> {
 
-		private static Map<String, HMapStIW> inMapperHash;
+		private static Map<String, HMapStIW> inMapperHash = new HashMap<String, HMapStIW>();
 		private static HMapStIW mapStrInt;
 		private static Text KEY = new Text();
-
-		@Override
-		public void setup(Context context) throws IOException, InterruptedException{
-			inMapperHash = new HashMap<String, HMapStIW>();
-		}
 
 		@Override
 		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException{
