@@ -121,10 +121,9 @@ public class PairsPMI extends Configured implements Tool {
 
 		@Override
 		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException{
-			//inMapperHash = getMap();
 			String line = value.toString();
 			//limpar caracteres especiais
-			line = line.replaceAll("[\",.:;=$#@%\\*!\\?\\[\\]\\(\\)\\{\\}&]","");
+			line = line.replaceAll("[\",.:;=$#@%\\*!\\?\\[\\]\\(\\)\\{\\}&<>]","");
 			line = line.toLowerCase();
 
 			String token;
@@ -198,12 +197,10 @@ public class PairsPMI extends Configured implements Tool {
 		private static Map<String, Integer> tokensCount = new HashMap<String, Integer>();
 
 		private static DoubleWritable PMI = new DoubleWritable();
-		private static double totalDocs = 0.0; //Corrigir este numero
+		private static double totalDocs = 0.0;
 
 		@Override
 		public void setup(Context context) throws IOException{
-			//TODO Read from intermediate output of first job
-			// and build in-memory map of terms to their individual totals
 			Configuration conf = context.getConfiguration();
 			FileSystem fs = FileSystem.get(conf);
 
@@ -273,9 +270,6 @@ public class PairsPMI extends Configured implements Tool {
 
 				double pmi = Math.log10(probPair / (probLeft * probRight));
 
-
-				pair.set(left, right);
-
 				PMI.set(pmi);
 				context.write(pair, PMI);
 			}
@@ -308,16 +302,11 @@ public class PairsPMI extends Configured implements Tool {
 			return -1;
 		}
 
-	    //String inputPath = cmdline.getOptionValue(INPUT);
 		String inputPath = args.input;
 
-		//TODO This output path is for the 2nd job's.
-		//    The fits job will have an intermediate output path from which the second job's reducer will read
-		//String outputPath = cmdline.getOptionValue(OUTPUT);
 		String outputPath = args.output;
 		String intermediatePath = "./tokens_count_file";
 
-		//int reduceTasks = cmdline.hasOption(NUM_REDUCERS) ? Integer.parseInt(cmdline.getOptionValue(NUM_REDUCERS)) : 1;
 		int reduceTasks = args.numReducers;
 
 		LOG.info("Tool: " + PairsPMI.class.getSimpleName() + " TokensCount Part");
@@ -345,7 +334,7 @@ public class PairsPMI extends Configured implements Tool {
 		job1.setCombinerClass(TokensCountReducer.class);
 		job1.setReducerClass(TokensCountReducer.class);	
 
-		// Delete the output directory if it exists already.
+		// exclui o diretorio antigo, caso exista
 		Path intermediateDir = new Path(intermediatePath);
 		FileSystem.get(conf).delete(intermediateDir, true);
 
@@ -354,7 +343,7 @@ public class PairsPMI extends Configured implements Tool {
 		LOG.info("Job Finished in " + (System.currentTimeMillis() - startTime) / 1000.0 + " seconds");
 
 
-		// Start second job
+		// inicia o segundo job
 		LOG.info("------------------------------------------------------------------------------\n");
 		LOG.info("Tool: " + PairsPMI.class.getSimpleName() + " Pairs Part");
 		LOG.info(" - input path: " + inputPath);
@@ -370,7 +359,6 @@ public class PairsPMI extends Configured implements Tool {
 		FileInputFormat.setInputPaths(job2,  new Path(inputPath));
 		TextOutputFormat.setOutputPath(job2, new Path(outputPath));
 
-		//TODO Which output key??
 		job2.setOutputKeyClass(PairOfStrings.class);
 		job2.setOutputValueClass(IntWritable.class);
 		job2.setMapperClass(PairsPMIMapper.class);
