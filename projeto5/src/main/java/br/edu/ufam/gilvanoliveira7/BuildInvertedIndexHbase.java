@@ -65,7 +65,7 @@ import org.apache.hadoop.hbase.mapreduce.TableReducer;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class BuildInvertedIndexHbase extends Configured implements Tool {
-    private static final Logger LOG = Logger.getLogger(BuildInvertedIndexCompressed.class);
+    private static final Logger LOG = Logger.getLogger(BuildInvertedIndexHbase.class);
 
     public static final String[] FAMILIES = { "p" };
     public static final byte[] CF = FAMILIES[0].getBytes();
