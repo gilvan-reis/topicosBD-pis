@@ -219,10 +219,10 @@ public class BuildInvertedIndexHbase extends Configured implements Tool {
     public static class InvertedIndexTableReducer extends TableReducer<Text,ArrayListWritable<PairOfWritables<IntWritable,VIntWritable>>, ImmutableBytesWritable>  {
         public void reduce(Text key, Iterable<ArrayListWritable<PairOfWritables<IntWritable,VIntWritable>>> values, Context context) throws IOException, InterruptedException {
           int sum = 0;
-          /*ArrayListWritable<PairOfWritables<IntWritable,VIntWritable>>
-          for (ArrayListWritable array:values){
+
+          /*for (ArrayListWritable array:values){
               for(PairOfWritables<IntWritable,VIntWritable> pair:array){
-                  sum += val.get();
+                  sum += pair.getLeftElement().get();
               }
           }*/
           Put put = new Put(Bytes.toBytes(key.toString()));
