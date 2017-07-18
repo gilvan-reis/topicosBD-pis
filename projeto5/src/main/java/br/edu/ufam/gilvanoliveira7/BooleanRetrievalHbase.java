@@ -12,6 +12,8 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.Stack;
 import java.util.TreeSet;
+import java.io.DataInputStream;
+import java.io.ByteArrayInputStream;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -117,8 +119,13 @@ public class BooleanRetrievalHbase extends Configured implements Tool {
     Get get = new Get(Bytes.toBytes(term));
     Result result = table.get(get);
 
-    PairOfWritables<IntWritable, ArrayListWritable<PairOfInts>> postings = result.getValue(BuildInvertedIndexHbase.CF, BuildInvertedIndexHbase.FREQ);
-
+    PairOfWritables<IntWritable, ArrayListWritable<PairOfInts>> postings = new PairOfWritables<IntWritable, ArrayListWritable<PairOfInts>>();
+    try {
+      DataInputStream data = new DataInputStream(new ByteArrayInputStream(result.getValue(BuildInvertedIndexHbase.CF, BuildInvertedIndexHbase.FREQ)));
+      postings.readFields(data);
+    }catch(Exception e){
+      e.printStackTrace();
+    }
     return postings.getRightElement();
   }
 
